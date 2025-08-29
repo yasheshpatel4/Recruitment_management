@@ -1,0 +1,150 @@
+📊Database Schema 
+
+1. Roles Table
+
+RoleID (Primary Key)
+RoleName (Admin, HR, Recruiter, Interviewer, Reviewer, Candidate)
+
+2. Users Table
+
+UserID (Primary Key)
+Username (Unique, login ID)
+PasswordHash (Encrypted password)
+Email (Unique)
+FullName
+CreatedAt
+Status (Active, Inactive, PendingApproval)
+
+3. UserRoles Table (for multiple roles per user)
+
+UserRoleID (Primary Key)
+UserID (Foreign Key → Users)
+RoleID (Foreign Key → Roles)
+Relation:
+Candidates always get Candidate role automatically.
+Internal users (HR, Recruiter, etc.) must be approved by Admin.
+
+4. RegistrationRequests Table (only for internal users)
+
+RequestID (Primary Key)
+FullName
+Email
+Username
+PasswordHash
+RequestedRoles
+RequestDate
+Status (Pending, Approved, Rejected)
+ApprovedBy (UserID of Admin, Foreign Key → Users)
+
+5. Candidates Table
+
+CandidateID (Primary Key)
+UserID (Foreign Key → Users)
+ResumePath
+ExperienceYears
+CandidateStatus (Applied, Shortlisted, Interview, Selected, Rejected, On Hold)
+UpdatedBy (UserID of HR/Recruiter/Admin who last updated status)
+UpdatedAt (Last update timestamp)
+CreatedAt
+
+
+6. Skills Table
+
+SkillID (Primary Key)
+SkillName
+
+7. JobSkills Table
+
+JobID (Foreign Key → Jobs)
+SkillID (Foreign Key → Skills)
+
+8. Jobs Table
+
+JobID (Primary Key)
+Title
+Description
+MinExperience
+Location
+Status (Open, On Hold, Closed)
+CreatedBy (Foreign Key → Users)
+CreatedAt
+ClosedReason
+
+9. CandidateSkills Table
+
+CandidateID (Foreign Key → Candidates)
+SkillID (Foreign Key → Skills)
+ExperienceYears
+
+10. CandidateJobs Table
+
+CandidateJobID (Primary Key)
+CandidateID (Foreign Key → Candidates)
+JobID (Foreign Key → Jobs)
+AppliedDate
+
+11. Interviews Table
+
+InterviewID (Primary Key)
+CandidateID (Foreign Key → Candidates)
+JobID (Foreign Key → Jobs)
+ScheduledDate
+InterviewType (Technical, HR, Panel, Online Test)
+RoundNo
+Status (Scheduled, Completed, Cancelled)
+
+12. Interviewers Table
+
+InterviewerID (Primary Key)
+InterviewID (Foreign Key → Interviews)
+UserID (Foreign Key → Users)
+
+13. Feedback Table
+
+FeedbackID (Primary Key)
+InterviewID (Foreign Key → Interviews)
+InterviewerID (Foreign Key → Users)
+Rating
+Comments
+CreatedAt
+
+14. Documents Table
+
+DocumentID (Primary Key)
+CandidateID (Foreign Key → Candidates)
+DocumentType
+FilePath
+Verified (Yes/No)
+
+15. Offers Table
+
+OfferID (Primary Key)
+CandidateID (Foreign Key → Candidates)
+JobID (Foreign Key → Jobs)
+OfferDate
+JoiningDate
+Status (Offered, Accepted, Rejected, Joined)
+
+16. Notifications Table
+
+NotificationID (Primary Key)
+UserID (Foreign Key → Users)
+Message
+IsRead (Yes/No)
+CreatedAt
+
+🔗 Relationships Summary (Final Version)
+
+Users ↔ Roles (via UserRoles): one user can have multiple roles.
+Candidates ↔ Users: Candidate is linked to a user account.
+CandidateStatus: Can only be changed by Users with HR/Recruiter/Admin/Reviewer role, not by Candidate.
+Jobs ↔ Users: Jobs are created by Recruiters.
+Jobs ↔ Skills: A job requires multiple skills.
+Candidates ↔ Skills: A candidate has multiple skills.
+Candidates ↔ Jobs: A candidate applies to jobs.
+Candidates ↔ Interviews: A candidate attends multiple interviews.
+Interviews ↔ Interviewers (Users): Multiple interviewers can attend.
+Interviews ↔ Feedback: Interviewers give feedback.
+Candidates ↔ Documents: Candidates upload documents.
+Candidates ↔ Offers: A candidate may receive offers.
+Users ↔ Notifications: Every user gets notifications.
