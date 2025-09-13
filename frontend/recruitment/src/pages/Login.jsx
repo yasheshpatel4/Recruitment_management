@@ -18,9 +18,9 @@ export default function Login() {
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 
-	const onSubmit = (e) => {
+	const onSubmit = async (e) => {
 		e.preventDefault();
-		const res = login(username, password);
+		const res = await login(username, password);
 		if (res.ok) {
 			navigate(getRoute(res.user.roles || []), { replace: true });
 		}

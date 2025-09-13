@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'rp_user';
+const STORAGE_TOKEN = 'rp_token';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 function readUser() {
 	try {
@@ -12,42 +14,90 @@ function readUser() {
 	}
 }
 
+function readToken() {
+	return localStorage.getItem(STORAGE_TOKEN);
+}
+
 function writeUser(user) {
 	if (!user) localStorage.removeItem(STORAGE_KEY);
 	else localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+}
+
+function writeToken(token) {
+	if (!token) localStorage.removeItem(STORAGE_TOKEN);
+	else localStorage.setItem(STORAGE_TOKEN, token);
+}
+
+async function apiRequest(endpoint, options = {}) {
+	const token = readToken();
+	const config = {
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` }),
+		},
+		...options,
+	};
+
+	const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+	const data = await response.json();
+	
+	if (!response.ok) {
+		throw new Error(data.message || 'API request failed');
+	}
+	
+	return data;
 }
 
 export function AuthProvider({ children }) {
 	const [user, setUser] = useState(() => readUser());
 	useEffect(() => { writeUser(user); }, [user]);
 
-	const login = (username, password) => {
-		const existing = readUser();
-		if (existing && existing.username === username && existing.password === password) {
-			alert(`Welcome ${existing.fullName || existing.username}`);
-			setUser(existing);
-			return { ok: true, user: existing };
+	const login = async (username, password) => {
+		try {
+			const response = await apiRequest('/auth/login', {
+				method: 'POST',
+				body: JSON.stringify({ username, password }),
+			});
+
+			if (response.success) {
+				writeToken(response.token);
+				setUser(response.user);
+				alert(`Welcome ${response.user.fullName || response.user.username}`);
+				return { ok: true, user: response.user };
+			} else {
+				alert(response.message || 'Login failed');
+				return { ok: false };
+			}
+		} catch (error) {
+			alert(error.message || 'Login failed');
+			return { ok: false };
 		}
-		alert('Invalid credentials');
-		return { ok: false };
 	};
 
-	const register = ({ fullName, email, username, password, roles }) => {
-		const isCandidate = roles.includes('Candidate');
-		const internalRoles = roles.filter(r => r !== 'Candidate');
-		const newUser = {
-			userId: Date.now(), fullName, email, username, password,
-			roles: isCandidate ? ['Candidate', ...internalRoles] : internalRoles,
-			status: internalRoles.length ? 'PendingApproval' : 'Active',
-			createdAt: new Date().toISOString(),
-		};
-		if (internalRoles.length) alert('Registration pending admin approval');
-		else alert('Registered successfully');
-		setUser(newUser);
-		return { ok: true, user: newUser };
+	const register = async ({ fullName, email, username, password, roles }) => {
+		try {
+			const response = await apiRequest('/auth/register', {
+				method: 'POST',
+				body: JSON.stringify({ fullName, email, username, password, roles }),
+			});
+
+			if (response.success) {
+				alert(response.message || 'Registration successful');
+				return { ok: true, user: response.user };
+			} else {
+				alert(response.message || 'Registration failed');
+				return { ok: false };
+			}
+		} catch (error) {
+			alert(error.message || 'Registration failed');
+			return { ok: false };
+		}
 	};
 
-	const logout = () => setUser(null);
+	const logout = () => {
+		writeToken(null);
+		setUser(null);
+	};
 
 	const value = useMemo(() => ({ user, login, register, logout }), [user]);
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -15,10 +15,10 @@ export default function Register() {
 
 	const toggleRole = (role) => setRoles(prev => prev.includes(role) ? prev.filter(r=>r!==role) : [...prev, role]);
 
-	const onSubmit = (e) => {
+	const onSubmit = async (e) => {
 		e.preventDefault();
 		if (!roles.length) { alert('Select at least one role'); return; }
-		const res = register({ fullName, email, username, password, roles });
+		const res = await register({ fullName, email, username, password, roles });
 		if (res.ok) navigate('/login', { replace: true });
 	};
 
