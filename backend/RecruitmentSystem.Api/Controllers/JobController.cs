@@ -9,7 +9,7 @@ namespace RecruitmentSystem.Api.Controllers
 {
     [ApiController]
     [Route("api/jobs")]
-    [Authorize(Roles = "HR,Recruiter,Interviewer,Reviewer")]
+    [Authorize(Roles = "HR,Recruiter,Interviewer,Reviewer,Candidate")]
     public class JobController : ControllerBase
     {
         private readonly IJobService _jobService;

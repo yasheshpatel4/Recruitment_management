@@ -54,10 +54,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<ICandidateRepository, CandidateRepository>();
 
 // Add services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJobService, JobService>();
+builder.Services.AddScoped<ICandidateService, CandidateService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
