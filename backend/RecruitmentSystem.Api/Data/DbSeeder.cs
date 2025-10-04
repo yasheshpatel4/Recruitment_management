@@ -112,30 +112,33 @@ namespace RecruitmentSystem.Api.Data
                     new Job
                     {
                         Title = "Senior Software Engineer",
+                        Department = "Engineering",
                         Description = "We are looking for a senior software engineer with 5+ years of experience in C# and React.",
-                        MinExperience = 5,
+                        MinExperience = "5 years",
                         Location = "New York, NY",
-                        Status = "Open",
+                        Status = JobStatus.Open,
                         CreatedBy = recruiterUser.Id,
                         CreatedAt = DateTime.UtcNow.AddDays(-10)
                     },
                     new Job
                     {
                         Title = "Full Stack Developer",
+                        Department = "Engineering",
                         Description = "Full stack developer position with experience in JavaScript, Node.js, and React.",
-                        MinExperience = 3,
+                        MinExperience = "3 years",
                         Location = "San Francisco, CA",
-                        Status = "Open",
+                        Status = JobStatus.Open,
                         CreatedBy = recruiterUser.Id,
                         CreatedAt = DateTime.UtcNow.AddDays(-5)
                     },
                     new Job
                     {
                         Title = "DevOps Engineer",
+                        Department = "Operations",
                         Description = "DevOps engineer with experience in Azure, Docker, and CI/CD pipelines.",
-                        MinExperience = 4,
+                        MinExperience = "4 years",
                         Location = "Seattle, WA",
-                        Status = "On Hold",
+                        Status = JobStatus.OnHold,
                         CreatedBy = recruiterUser.Id,
                         CreatedAt = DateTime.UtcNow.AddDays(-3)
                     }

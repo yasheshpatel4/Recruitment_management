@@ -254,9 +254,9 @@ namespace RecruitmentSystem.Api.Controllers
         private async Task<DashboardStatsDto> GetDashboardStats()
         {
             var totalJobs = await _context.Jobs.CountAsync();
-            var openJobs = await _context.Jobs.CountAsync(j => j.Status == "Open");
-            var onHoldJobs = await _context.Jobs.CountAsync(j => j.Status == "On Hold");
-            var closedJobs = await _context.Jobs.CountAsync(j => j.Status == "Closed");
+            var openJobs = await _context.Jobs.CountAsync(j => j.Status == JobStatus.Open);
+            var onHoldJobs = await _context.Jobs.CountAsync(j => j.Status == JobStatus.OnHold);
+            var closedJobs = await _context.Jobs.CountAsync(j => j.Status == JobStatus.Closed);
 
             var totalCandidates = await _context.Candidates.CountAsync();
             var appliedCandidates = await _context.Candidates.CountAsync(c => c.Status == "Applied");
@@ -313,9 +313,9 @@ namespace RecruitmentSystem.Api.Controllers
                     Title = j.Title,
                     Location = j.Location,
                     MinExperience = j.MinExperience,
-                    Status = j.Status,
+                    Status = j.Status.ToString(),
                     CreatedAt = j.CreatedAt,
-                    CreatedBy = j.CreatedByUser.FullName,
+                    CreatedBy = j.CreatedByUser != null ? j.CreatedByUser.FullName : string.Empty,
                     AppliedCount = j.CandidateJobs.Count
                 })
                 .ToListAsync();

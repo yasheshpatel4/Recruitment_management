@@ -32,8 +32,25 @@ export default function Others() {
 	const [showCandidateModal, setShowCandidateModal] = useState(false);
 	const [showInterviewModal, setShowInterviewModal] = useState(false);
 	const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [jobToDelete, setJobToDelete] = useState(null);
 	const [selectedCandidate, setSelectedCandidate] = useState(null);
 	const [selectedInterview, setSelectedInterview] = useState(null);
+	const [jobs, setJobs] = useState([]);
+	const [candidates, setCandidates] = useState([]);
+	const [skills, setSkills] = useState([]);
+	const [editingJob, setEditingJob] = useState(null);
+	const [jobForm, setJobForm] = useState({
+		title: '',
+		department: 'Engineering',
+		location: '',
+		minExperience: '0-1 years',
+		description: '',
+		status: 'Open',
+		closedReason: '',
+		selectedCandidateId: null,
+		skillIds: []
+	});
 
 	const loadDashboardData = useCallback(async () => {
 		try {
@@ -57,9 +74,132 @@ export default function Others() {
 		}
 	}, [user?.roles]);
 
+	const loadCandidates = useCallback(async () => {
+		try {
+			const data = await apiRequest('/candidate');
+			setCandidates(data);
+		} catch (error) {
+			console.error('Failed to load candidates:', error);
+		}
+	}, []);
+
+	const loadJobs = useCallback(async () => {
+		try {
+			const data = await apiRequest('/jobs');
+			setJobs(data);
+		} catch (error) {
+			console.error('Failed to load jobs:', error);
+		}
+	}, []);
+
+	const loadSkills = useCallback(async () => {
+		try {
+			const data = await apiRequest('/jobs/skills');
+			setSkills(data);
+		} catch (error) {
+			console.error('Failed to load skills:', error);
+		}
+	}, []);
+
 	useEffect(() => {
 		loadDashboardData();
-	}, [loadDashboardData]);
+		loadCandidates();
+		loadJobs();
+		loadSkills();
+	}, [loadDashboardData, loadCandidates, loadJobs, loadSkills]);
+
+	useEffect(() => {
+		if (editingJob) {
+			setJobForm({
+				title: editingJob.title || '',
+				department: editingJob.department || 'Engineering',
+				location: editingJob.location || '',
+				minExperience: editingJob.minExperience || '0-1 years',
+				description: editingJob.description || '',
+				status: editingJob.status || 'Open',
+				closedReason: editingJob.closedReason || '',
+				selectedCandidateId: editingJob.selectedCandidateId || null,
+				skillIds: editingJob.Skills ? editingJob.Skills.map(s => s.id) : []
+			});
+		} else {
+			setJobForm({
+				title: '',
+				department: 'Engineering',
+				location: '',
+				minExperience: '0-1 years',
+				description: '',
+				status: 'Open',
+				closedReason: '',
+				selectedCandidateId: null,
+				skillIds: []
+			});
+		}
+	}, [editingJob]);
+
+	const handleDeleteJob = async (jobId) => {
+		setJobToDelete(jobId);
+		setShowDeleteConfirm(true);
+	};
+
+	const confirmDeleteJob = async () => {
+		if (!jobToDelete) return;
+
+		try {
+			await apiRequest(`/jobs/${jobToDelete}`, { method: 'DELETE' });
+			loadJobs(); // Reload jobs after deletion
+			setShowDeleteConfirm(false);
+			setJobToDelete(null);
+		} catch (error) {
+			console.error('Failed to delete job:', error);
+			alert('Failed to delete job');
+		}
+	};
+
+	const handleJobSubmit = async (e) => {
+		e.preventDefault();
+
+		try {
+			let payload;
+			if (editingJob) {
+				// Update existing job - send all fields
+				payload = jobForm;
+			} else {
+				// Create new job - send only required fields
+				payload = {
+					title: jobForm.title,
+					department: jobForm.department,
+					description: jobForm.description,
+					minExperience: jobForm.minExperience,
+					location: jobForm.location,
+					skillIds: jobForm.skillIds
+				};
+			}
+
+			if (editingJob) {
+				await apiRequest(`/jobs/${editingJob.id}`, {
+					method: 'PUT',
+					body: JSON.stringify(payload)
+				});
+			} else {
+				await apiRequest('/jobs', {
+					method: 'POST',
+					body: JSON.stringify(payload)
+				});
+			}
+
+			loadJobs(); // Reload jobs after creation/update
+			setShowJobModal(false);
+			setEditingJob(null);
+		} catch (error) {
+			console.error('Failed to save job:', error);
+			alert('Failed to save job');
+		}
+	};
+
+	const handleJobModalClose = () => {
+		setShowJobModal(false);
+		setEditingJob(null);
+	};
 
 	const getRoleDisplayName = () => {
 		if (user?.roles?.includes('HR')) return 'HR Manager';
@@ -288,9 +428,9 @@ export default function Others() {
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-xl font-semibold">Create New Job</h3>
-					<button 
-						onClick={() => setShowJobModal(false)}
+					<h3 className="text-xl font-semibold">{editingJob ? 'Edit Job' : 'Create New Job'}</h3>
+					<button
+						onClick={handleJobModalClose}
 						className="text-gray-500 hover:text-gray-700"
 					>
 						<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,20 +438,27 @@ export default function Others() {
 						</svg>
 					</button>
 				</div>
-				
-				<form className="space-y-4">
+
+				<form onSubmit={handleJobSubmit} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
 							<input
 								type="text"
+								value={jobForm.title}
+								onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
 								placeholder="Enter job title"
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
 							/>
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+							<select
+								value={jobForm.department}
+								onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
 								<option>Engineering</option>
 								<option>Marketing</option>
 								<option>Sales</option>
@@ -319,19 +466,26 @@ export default function Others() {
 							</select>
 						</div>
 					</div>
-					
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
 							<input
 								type="text"
+								value={jobForm.location}
+								onChange={(e) => setJobForm({ ...jobForm, location: e.target.value })}
 								placeholder="Enter location"
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
 							/>
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Experience Required</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+							<select
+								value={jobForm.minExperience}
+								onChange={(e) => setJobForm({ ...jobForm, minExperience: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
 								<option>0-1 years</option>
 								<option>1-3 years</option>
 								<option>3-5 years</option>
@@ -344,15 +498,76 @@ export default function Others() {
 						<label className="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
 						<textarea
 							rows={4}
+							value={jobForm.description}
+							onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
 							placeholder="Enter job description..."
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							required
 						></textarea>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+							<select
+								value={jobForm.status}
+								onChange={(e) => setJobForm({ ...jobForm, status: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
+								<option>Open</option>
+								<option>Closed</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">Selected Candidate</label>
+							<select
+								value={jobForm.selectedCandidateId || ''}
+								onChange={(e) => setJobForm({ ...jobForm, selectedCandidateId: e.target.value ? parseInt(e.target.value) : null })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
+								<option value="">No candidate selected</option>
+								{candidates.map(candidate => (
+									<option key={candidate.id} value={candidate.id}>{candidate.fullName}</option>
+								))}
+							</select>
+						</div>
+					</div>
+
+					{jobForm.status === 'Closed' && (
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">Closed Reason</label>
+							<textarea
+								rows={3}
+								value={jobForm.closedReason}
+								onChange={(e) => setJobForm({ ...jobForm, closedReason: e.target.value })}
+								placeholder="Enter reason for closing the job..."
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
+							></textarea>
+						</div>
+					)}
+
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">Required Skills</label>
+						<select
+							multiple
+							value={jobForm.skillIds}
+							onChange={(e) => {
+								const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10)).filter(id => !isNaN(id));
+								setJobForm({ ...jobForm, skillIds: selected });
+							}}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							{skills.map(skill => (
+								<option key={skill.id} value={skill.id}>{skill.name}</option>
+							))}
+						</select>
 					</div>
 
 					<div className="flex justify-end gap-3">
 						<button
 							type="button"
-							onClick={() => setShowJobModal(false)}
+							onClick={handleJobModalClose}
 							className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
 						>
 							Cancel
@@ -361,7 +576,7 @@ export default function Others() {
 							type="submit"
 							className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
 						>
-							Create Job
+							{editingJob ? 'Update Job' : 'Create Job'}
 						</button>
 					</div>
 				</form>
@@ -582,7 +797,7 @@ export default function Others() {
 			<div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="text-xl font-semibold">Submit Interview Feedback</h3>
-					<button 
+					<button
 						onClick={() => setShowFeedbackModal(false)}
 						className="text-gray-500 hover:text-gray-700"
 					>
@@ -591,7 +806,7 @@ export default function Others() {
 						</svg>
 					</button>
 				</div>
-				
+
 				{selectedInterview && (
 					<form className="space-y-4">
 						<div className="bg-gray-50 p-4 rounded-lg">
@@ -673,6 +888,43 @@ export default function Others() {
 						</div>
 					</form>
 				)}
+			</div>
+		</div>
+	);
+
+	const DeleteConfirmModal = () => (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg p-6 w-full max-w-md">
+				<div className="flex justify-between items-center mb-4">
+					<h3 className="text-xl font-semibold text-gray-900">Confirm Deletion</h3>
+					<button
+						onClick={() => setShowDeleteConfirm(false)}
+						className="text-gray-500 hover:text-gray-700"
+					>
+						<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+
+				<div className="mb-6">
+					<p className="text-gray-700">Are you sure you want to delete this job? This action cannot be undone.</p>
+				</div>
+
+				<div className="flex justify-end gap-3">
+					<button
+						onClick={() => setShowDeleteConfirm(false)}
+						className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+					>
+						Cancel
+					</button>
+					<button
+						onClick={confirmDeleteJob}
+						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+					>
+						Delete
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -1044,7 +1296,7 @@ export default function Others() {
 
 									{/* Jobs Grid */}
 									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-										{mockJobs.map(job => (
+										{jobs.map(job => (
 											<div key={job.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
 												<div className="flex justify-between items-start mb-2">
 													<h4 className="text-lg font-semibold text-gray-900">{job.title}</h4>
@@ -1056,16 +1308,29 @@ export default function Others() {
 												</div>
 												<p className="text-sm text-gray-600 mb-2">{job.department} • {job.location}</p>
 												<div className="flex flex-wrap gap-2 mb-3">
-													<span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">{job.experience}</span>
-													<span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">{job.salary}</span>
-													<span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">{job.applications} applications</span>
+													<span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">{job.minExperience}+ years</span>
+													<span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">{job.Skills?.length || 0} skills</span>
+													<span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">0 applications</span>
 												</div>
 												<p className="text-sm text-gray-600 mb-4">{job.description}</p>
 												<div className="flex justify-between items-center">
-													<span className="text-xs text-gray-500">Posted: {job.postedDate}</span>
+													<span className="text-xs text-gray-500">Posted: {new Date(job.createdAt).toLocaleDateString()}</span>
 													<div className="flex gap-2">
-														<button className="text-blue-600 hover:text-blue-900 text-sm">Edit</button>
-														<button className="text-red-600 hover:text-red-900 text-sm">Delete</button>
+														<button
+															onClick={() => {
+																setEditingJob(job);
+																setShowJobModal(true);
+															}}
+															className="text-blue-600 hover:text-blue-900 text-sm"
+														>
+															Edit
+														</button>
+														<button
+															onClick={() => handleDeleteJob(job.id)}
+															className="text-red-600 hover:text-red-900 text-sm"
+														>
+															Delete
+														</button>
 													</div>
 												</div>
 											</div>
@@ -1217,6 +1482,7 @@ export default function Others() {
 						{showCandidateModal && <CandidateModal />}
 						{showInterviewModal && <InterviewModal />}
 						{showFeedbackModal && <FeedbackModal />}
+						{showDeleteConfirm && <DeleteConfirmModal />}
 					</div>
 				) : (
 					<div className="text-center py-8 text-gray-500">

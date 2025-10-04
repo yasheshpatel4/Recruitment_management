@@ -28,7 +28,7 @@ namespace RecruitmentSystem.Api.Models
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
-        public int MinExperience { get; set; }
+        public string MinExperience { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
