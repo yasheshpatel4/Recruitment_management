@@ -22,6 +22,21 @@ namespace RecruitmentSystem.Api.Controllers
             _logger = logger;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<List<InterviewDto>>> GetAllInterviews()
+        {
+            try
+            {
+                var interviews = await _interviewService.GetAllInterviewsAsync();
+                return Ok(interviews);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving interviews");
+                return StatusCode(500, new { message = "Error retrieving interviews", error = ex.Message });
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<InterviewDto>> GetInterview(int id)
         {

@@ -40,6 +40,9 @@ export default function Others() {
 	const [candidates, setCandidates] = useState([]);
 	const [skills, setSkills] = useState([]);
 	const [editingJob, setEditingJob] = useState(null);
+	const [interviews, setInterviews] = useState([]);
+	const [interviewers, setInterviewers] = useState([]);
+	const [interviewLoading, setInterviewLoading] = useState(false);
 	const [jobForm, setJobForm] = useState({
 		title: '',
 		department: 'Engineering',
@@ -51,6 +54,24 @@ export default function Others() {
 		selectedCandidateId: null,
 		skillIds: []
 	});
+	const [interviewForm, setInterviewForm] = useState({
+		candidateId: '',
+		jobId: '',
+		scheduledDate: '',
+		scheduledTime: '',
+		interviewType: 'Technical',
+		roundNo: 1,
+		interviewerIds: [],
+		notes: ''
+	});
+	const [feedbackForm, setFeedbackForm] = useState({
+		interviewerId: '',
+		rating: '',
+		comments: ''
+	});
+	const [schedulingInterview, setSchedulingInterview] = useState(false);
+	const [submittingFeedback, setSubmittingFeedback] = useState(false);
+	const [updatingStatus, setUpdatingStatus] = useState(false);
 
 	const loadDashboardData = useCallback(async () => {
 		try {
@@ -101,12 +122,39 @@ export default function Others() {
 		}
 	}, []);
 
+	const loadInterviews = useCallback(async () => {
+		try {
+			setInterviewLoading(true);
+			const data = await apiRequest('/interview');
+			setInterviews(data);
+		} catch (error) {
+			console.error('Failed to load interviews:', error);
+		} finally {
+			setInterviewLoading(false);
+		}
+	}, []);
+
+	const loadInterviewers = useCallback(async () => {
+		try {
+			// Load users with Interviewer role
+			const data = await apiRequest('/admin/all-users');
+			const interviewerUsers = data.filter(user =>
+				user.roles && user.roles.includes('Interviewer')
+			);
+			setInterviewers(interviewerUsers);
+		} catch (error) {
+			console.error('Failed to load interviewers:', error);
+		}
+	}, []);
+
 	useEffect(() => {
 		loadDashboardData();
 		loadCandidates();
 		loadJobs();
 		loadSkills();
-	}, [loadDashboardData, loadCandidates, loadJobs, loadSkills]);
+		loadInterviews();
+		loadInterviewers();
+	}, [loadDashboardData, loadCandidates, loadJobs, loadSkills, loadInterviews, loadInterviewers]);
 
 	useEffect(() => {
 		if (editingJob) {
@@ -135,6 +183,100 @@ export default function Others() {
 			});
 		}
 	}, [editingJob]);
+
+	const handleStatusUpdate = async (interviewId, newStatus) => {
+		try {
+			setUpdatingStatus(true);
+			await apiRequest(`/interview/${interviewId}/status`, {
+				method: 'PUT',
+				body: JSON.stringify({ status: newStatus })
+			});
+			loadInterviews(); // Reload interviews after status update
+		} catch (error) {
+			console.error('Failed to update interview status:', error);
+			alert('Failed to update interview status');
+		} finally {
+			setUpdatingStatus(false);
+		}
+	};
+
+	const handleScheduleInterview = async (e) => {
+		e.preventDefault();
+
+		try {
+			setSchedulingInterview(true);
+
+			// Combine date and time into a single DateTime string
+			const scheduledDateTime = new Date(`${interviewForm.scheduledDate}T${interviewForm.scheduledTime}`);
+
+			const payload = {
+				candidateId: parseInt(interviewForm.candidateId),
+				jobId: parseInt(interviewForm.jobId),
+				scheduledDate: scheduledDateTime.toISOString(),
+				interviewType: interviewForm.interviewType,
+				roundNo: parseInt(interviewForm.roundNo),
+				interviewerIds: interviewForm.interviewerIds
+			};
+
+			await apiRequest('/interview/schedule', {
+				method: 'POST',
+				body: JSON.stringify(payload)
+			});
+
+			loadInterviews(); // Reload interviews after scheduling
+			setShowInterviewModal(false);
+			setInterviewForm({
+				candidateId: '',
+				jobId: '',
+				scheduledDate: '',
+				scheduledTime: '',
+				interviewType: 'Technical',
+				roundNo: 1,
+				interviewerIds: [],
+				notes: ''
+			});
+		} catch (error) {
+			console.error('Failed to schedule interview:', error);
+			alert('Failed to schedule interview');
+		} finally {
+			setSchedulingInterview(false);
+		}
+	};
+
+	const handleFeedbackSubmit = async (e) => {
+		e.preventDefault();
+
+		if (!selectedInterview) return;
+
+		try {
+			setSubmittingFeedback(true);
+
+			const payload = {
+				interviewerId: parseInt(feedbackForm.interviewerId),
+				rating: parseInt(feedbackForm.rating),
+				comments: feedbackForm.comments
+			};
+
+			await apiRequest(`/interview/${selectedInterview.id}/feedback`, {
+				method: 'POST',
+				body: JSON.stringify(payload)
+			});
+
+			loadInterviews(); // Reload interviews after feedback submission
+			setShowFeedbackModal(false);
+			setSelectedInterview(null);
+			setFeedbackForm({
+				interviewerId: '',
+				rating: '',
+				comments: ''
+			});
+		} catch (error) {
+			console.error('Failed to submit feedback:', error);
+			alert('Failed to submit feedback');
+		} finally {
+			setSubmittingFeedback(false);
+		}
+	};
 
 	const handleDeleteJob = async (jobId) => {
 		setJobToDelete(jobId);
@@ -398,30 +540,7 @@ export default function Others() {
 		}
 	];
 
-	const mockInterviews = [
-		{
-			id: 1,
-			candidateName: 'John Doe',
-			jobTitle: 'Senior Software Engineer',
-			date: '2024-01-25',
-			time: '10:00 AM',
-			type: 'Technical',
-			round: 2,
-			status: 'Scheduled',
-			interviewers: ['Alice Johnson', 'Bob Smith']
-		},
-		{
-			id: 2,
-			candidateName: 'Jane Smith',
-			jobTitle: 'Frontend Developer',
-			date: '2024-01-26',
-			time: '2:00 PM',
-			type: 'HR',
-			round: 1,
-			status: 'Completed',
-			interviewers: ['Carol Davis']
-		}
-	];
+
 
 	// Modal Components
 	const JobModal = () => (
@@ -684,7 +803,7 @@ export default function Others() {
 			<div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="text-xl font-semibold">Schedule Interview</h3>
-					<button 
+					<button
 						onClick={() => setShowInterviewModal(false)}
 						className="text-gray-500 hover:text-gray-700"
 					>
@@ -693,42 +812,58 @@ export default function Others() {
 						</svg>
 					</button>
 				</div>
-				
-				<form className="space-y-4">
+
+				<form onSubmit={handleScheduleInterview} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Candidate</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-								<option>Select candidate</option>
-								{mockCandidates.map(candidate => (
-									<option key={candidate.id} value={candidate.id}>{candidate.name}</option>
+							<select
+								value={interviewForm.candidateId}
+								onChange={(e) => setInterviewForm({ ...interviewForm, candidateId: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
+							>
+								<option value="">Select candidate</option>
+								{candidates.map(candidate => (
+									<option key={candidate.id} value={candidate.id}>{candidate.fullName}</option>
 								))}
 							</select>
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Job Position</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-								<option>Select job</option>
-								{mockJobs.map(job => (
+							<select
+								value={interviewForm.jobId}
+								onChange={(e) => setInterviewForm({ ...interviewForm, jobId: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
+							>
+								<option value="">Select job</option>
+								{jobs.map(job => (
 									<option key={job.id} value={job.id}>{job.title}</option>
 								))}
 							</select>
 						</div>
 					</div>
-					
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
 							<input
 								type="date"
+								value={interviewForm.scheduledDate}
+								onChange={(e) => setInterviewForm({ ...interviewForm, scheduledDate: e.target.value })}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
 							/>
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
 							<input
 								type="time"
+								value={interviewForm.scheduledTime}
+								onChange={(e) => setInterviewForm({ ...interviewForm, scheduledTime: e.target.value })}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
 							/>
 						</div>
 					</div>
@@ -736,7 +871,11 @@ export default function Others() {
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Interview Type</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+							<select
+								value={interviewForm.interviewType}
+								onChange={(e) => setInterviewForm({ ...interviewForm, interviewType: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
 								<option>Technical</option>
 								<option>HR</option>
 								<option>Managerial</option>
@@ -745,28 +884,43 @@ export default function Others() {
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Round</label>
-							<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-								<option>1</option>
-								<option>2</option>
-								<option>3</option>
-								<option>4</option>
+							<select
+								value={interviewForm.roundNo}
+								onChange={(e) => setInterviewForm({ ...interviewForm, roundNo: e.target.value })}
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
+								<option value={1}>1</option>
+								<option value={2}>2</option>
+								<option value={3}>3</option>
+								<option value={4}>4</option>
 							</select>
 						</div>
 					</div>
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Interviewers</label>
-						<input
-							type="text"
-							placeholder="Enter interviewer names (comma separated)"
+						<select
+							multiple
+							value={interviewForm.interviewerIds}
+							onChange={(e) => {
+								const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10)).filter(id => !isNaN(id));
+								setInterviewForm({ ...interviewForm, interviewerIds: selected });
+							}}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-						/>
+							required
+						>
+							{interviewers.map(interviewer => (
+								<option key={interviewer.id} value={interviewer.id}>{interviewer.fullName}</option>
+							))}
+						</select>
 					</div>
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
 						<textarea
 							rows={3}
+							value={interviewForm.notes}
+							onChange={(e) => setInterviewForm({ ...interviewForm, notes: e.target.value })}
 							placeholder="Add any additional notes..."
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						></textarea>
@@ -782,9 +936,10 @@ export default function Others() {
 						</button>
 						<button
 							type="submit"
-							className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+							disabled={schedulingInterview}
+							className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
 						>
-							Schedule Interview
+							{schedulingInterview ? 'Scheduling...' : 'Schedule Interview'}
 						</button>
 					</div>
 				</form>
@@ -808,7 +963,7 @@ export default function Others() {
 				</div>
 
 				{selectedInterview && (
-					<form className="space-y-4">
+					<form onSubmit={handleFeedbackSubmit} className="space-y-4">
 						<div className="bg-gray-50 p-4 rounded-lg">
 							<h4 className="font-medium text-gray-900">Interview Details</h4>
 							<p className="text-sm text-gray-600">
@@ -821,53 +976,46 @@ export default function Others() {
 
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Overall Rating</label>
-								<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-									<option>Select rating</option>
-									<option>Excellent (5)</option>
-									<option>Good (4)</option>
-									<option>Average (3)</option>
-									<option>Below Average (2)</option>
-									<option>Poor (1)</option>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Interviewer</label>
+								<select
+									value={feedbackForm.interviewerId}
+									onChange={(e) => setFeedbackForm({ ...feedbackForm, interviewerId: e.target.value })}
+									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								>
+									<option value="">Select interviewer</option>
+									{interviewers.map(interviewer => (
+										<option key={interviewer.id} value={interviewer.id}>{interviewer.fullName}</option>
+									))}
 								</select>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Recommendation</label>
-								<select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-									<option>Select recommendation</option>
-									<option>Strong Hire</option>
-									<option>Hire</option>
-									<option>No Decision</option>
-									<option>No Hire</option>
-									<option>Strong No Hire</option>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Overall Rating</label>
+								<select
+									value={feedbackForm.rating}
+									onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: e.target.value })}
+									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								>
+									<option value="">Select rating</option>
+									<option value="5">Excellent (5)</option>
+									<option value="4">Good (4)</option>
+									<option value="3">Average (3)</option>
+									<option value="2">Below Average (2)</option>
+									<option value="1">Poor (1)</option>
 								</select>
 							</div>
-						</div>
-
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Technical Skills</label>
-							<textarea
-								rows={3}
-								placeholder="Rate technical skills and provide feedback..."
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-							></textarea>
-						</div>
-
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Communication Skills</label>
-							<textarea
-								rows={3}
-								placeholder="Rate communication skills and provide feedback..."
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-							></textarea>
 						</div>
 
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Overall Comments</label>
 							<textarea
 								rows={4}
+								value={feedbackForm.comments}
+								onChange={(e) => setFeedbackForm({ ...feedbackForm, comments: e.target.value })}
 								placeholder="Provide overall feedback and recommendations..."
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
 							></textarea>
 						</div>
 
@@ -881,9 +1029,10 @@ export default function Others() {
 							</button>
 							<button
 								type="submit"
-								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+								disabled={submittingFeedback}
+								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
 							>
-								Submit Feedback
+								{submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
 							</button>
 						</div>
 					</form>
@@ -1356,50 +1505,72 @@ export default function Others() {
 									
 									{/* Interview List */}
 									<div className="space-y-4">
-										{mockInterviews.map(interview => (
-											<div key={interview.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-												<div className="flex justify-between items-start">
-													<div className="flex-1">
-														<h4 className="text-lg font-semibold text-gray-900">{interview.candidateName}</h4>
-														<p className="text-sm text-gray-600">{interview.jobTitle}</p>
-														<div className="flex items-center mt-2">
-															<span className={`px-2 py-1 text-xs rounded-full ${
-																interview.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-																interview.status === 'Completed' ? 'bg-green-100 text-green-800' :
-																'bg-gray-100 text-gray-800'
-															}`}>
-																{interview.status}
-															</span>
-															<span className="text-xs text-gray-500 ml-2">
-																{interview.date} at {interview.time}
-															</span>
+										{interviewLoading ? (
+											<div className="text-center py-8">
+												<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+												<p className="mt-2 text-gray-600">Loading interviews...</p>
+											</div>
+										) : interviews.length === 0 ? (
+											<div className="text-center py-8 text-gray-500">
+												No interviews found
+											</div>
+										) : (
+											interviews.map(interview => (
+												<div key={interview.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+													<div className="flex justify-between items-start">
+														<div className="flex-1">
+															<h4 className="text-lg font-semibold text-gray-900">{interview.candidateName || 'Unknown Candidate'}</h4>
+															<p className="text-sm text-gray-600">{interview.jobTitle || 'Unknown Job'}</p>
+															<div className="flex items-center mt-2">
+																<span className={`px-2 py-1 text-xs rounded-full ${
+																	interview.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+																	interview.status === 'Completed' ? 'bg-green-100 text-green-800' :
+																	interview.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+																	'bg-gray-100 text-gray-800'
+																}`}>
+																	{interview.status}
+																</span>
+																<span className="text-xs text-gray-500 ml-2">
+																	{new Date(interview.scheduledDate).toLocaleDateString()} at {new Date(interview.scheduledDate).toLocaleTimeString()}
+																</span>
+															</div>
+															<div className="mt-2">
+																<p className="text-xs text-gray-500">
+																	{interview.interviewType} • Round {interview.roundNo}
+																</p>
+																<p className="text-xs text-gray-500">
+																	Interviewers: {interview.interviewerNames ? interview.interviewerNames.join(', ') : 'Not assigned'}
+																</p>
+															</div>
 														</div>
-														<div className="mt-2">
-															<p className="text-xs text-gray-500">
-																{interview.type} • Round {interview.round}
-															</p>
-															<p className="text-xs text-gray-500">
-																Interviewers: {interview.interviewers.join(', ')}
-															</p>
+														<div className="ml-4 flex flex-col gap-2">
+															<select
+																value={interview.status}
+																onChange={(e) => handleStatusUpdate(interview.id, e.target.value)}
+																className="px-2 py-1 text-xs border border-gray-300 rounded"
+																disabled={updatingStatus}
+															>
+																<option value="Scheduled">Scheduled</option>
+																<option value="Completed">Completed</option>
+																<option value="Cancelled">Cancelled</option>
+															</select>
+															<button
+																onClick={() => {
+																	setSelectedInterview(interview);
+																	setShowFeedbackModal(true);
+																}}
+																className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+															>
+																{interview.status === 'Completed' ? 'View Feedback' : 'Add Feedback'}
+															</button>
+															<button className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
+																Edit
+															</button>
 														</div>
-													</div>
-													<div className="ml-4 flex flex-col gap-2">
-														<button 
-															onClick={() => {
-																setSelectedInterview(interview);
-																setShowFeedbackModal(true);
-															}}
-															className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-														>
-															{interview.status === 'Completed' ? 'View Feedback' : 'Add Feedback'}
-														</button>
-														<button className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
-															Edit
-														</button>
 													</div>
 												</div>
-											</div>
-										))}
+											))
+										)}
 									</div>
 								</div>
 							</div>
