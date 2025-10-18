@@ -67,5 +67,10 @@ namespace RecruitmentSystem.Api.Services
         {
             return await _candidateRepository.GetAppliedJobsAsync(candidateId);
         }
+
+        public async Task<Skill> GetOrCreateSkillAsync(string skillName)
+        {
+            return await _candidateRepository.GetOrCreateSkillAsync(skillName);
+        }
     }
 }

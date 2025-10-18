@@ -82,6 +82,39 @@ namespace RecruitmentSystem.Api.Controllers
                 candidate.ExperienceYears = updateDto.ExperienceYears ?? candidate.ExperienceYears;
                 candidate.UpdatedAt = DateTime.UtcNow;
 
+                // Update user properties if provided
+                if (updateDto.FullName != null)
+                {
+                    candidate.User.FullName = updateDto.FullName;
+                }
+                if (updateDto.Email != null)
+                {
+                    candidate.User.Email = updateDto.Email;
+                }
+                candidate.User.UpdatedAt = DateTime.UtcNow;
+
+                // Update skills if provided
+                if (updateDto.Skills != null)
+                {
+                    // Clear existing skills
+                    candidate.CandidateSkills.Clear();
+
+                    // Add new skills
+                    foreach (var skillName in updateDto.Skills)
+                    {
+                        if (!string.IsNullOrWhiteSpace(skillName))
+                        {
+                            var skill = await _candidateService.GetOrCreateSkillAsync(skillName.Trim());
+                            candidate.CandidateSkills.Add(new CandidateSkill
+                            {
+                                CandidateId = candidate.Id,
+                                SkillId = skill.Id,
+                                ExperienceYears = 0 // Default value, could be enhanced later
+                            });
+                        }
+                    }
+                }
+
                 var updatedCandidate = await _candidateService.UpdateCandidateAsync(candidate);
                 return Ok(updatedCandidate);
             }
@@ -285,5 +318,10 @@ namespace RecruitmentSystem.Api.Controllers
     public class UpdateCandidateDto
     {
         public int? ExperienceYears { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? Bio { get; set; }
+        public List<string>? Skills { get; set; }
     }
 }

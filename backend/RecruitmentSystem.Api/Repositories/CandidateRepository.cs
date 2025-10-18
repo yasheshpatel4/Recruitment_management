@@ -138,5 +138,23 @@ namespace RecruitmentSystem.Api.Repositories
                 .OrderByDescending(cj => cj.AppliedDate)
                 .ToListAsync();
         }
+
+        public async Task<Skill> GetOrCreateSkillAsync(string skillName)
+        {
+            var skill = await _context.Skills
+                .FirstOrDefaultAsync(s => s.Name.ToLower() == skillName.ToLower());
+
+            if (skill == null)
+            {
+                skill = new Skill
+                {
+                    Name = skillName
+                };
+                _context.Skills.Add(skill);
+                await _context.SaveChangesAsync();
+            }
+
+            return skill;
+        }
     }
 }

@@ -15,5 +15,6 @@ namespace RecruitmentSystem.Api.Repositories
         Task<List<Document>> GetDocumentsByCandidateIdAsync(int candidateId);
         Task<bool> ApplyForJobAsync(int candidateId, int jobId);
         Task<List<CandidateJob>> GetAppliedJobsAsync(int candidateId);
+        Task<Skill> GetOrCreateSkillAsync(string skillName);
     }
 }

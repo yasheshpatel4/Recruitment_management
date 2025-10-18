@@ -37,10 +37,38 @@ export default function Candidate() {
 		skills: '',
 		salary: ''
 	});
+	const [profileForm, setProfileForm] = useState({
+		fullName: user?.fullName || '',
+		email: user?.email || '',
+		phone: '',
+		experienceYears: 0,
+		bio: '',
+		skills: []
+	});
+	const [uploading, setUploading] = useState(false);
+	const [uploadError, setUploadError] = useState('');
+	const [uploadSuccess, setUploadSuccess] = useState('');
+	const [isDragOver, setIsDragOver] = useState(false);
+	const [selectedFile, setSelectedFile] = useState(null);
+	const [uploadProgress, setUploadProgress] = useState(0);
+	const [filePreview, setFilePreview] = useState(null);
 
 	useEffect(() => {
 		loadDashboardData();
 	}, []);
+
+	useEffect(() => {
+		if (dashboardData?.candidate) {
+			setProfileForm({
+				fullName: user?.fullName || '',
+				email: user?.email || '',
+				phone: dashboardData.candidate.phone || '',
+				experienceYears: dashboardData.candidate.experienceYears || 0,
+				bio: dashboardData.candidate.bio || '',
+				skills: dashboardData.candidate.skills || []
+			});
+		}
+	}, [dashboardData, user]);
 
 	const loadDashboardData = async () => {
 		try {
@@ -51,6 +79,139 @@ export default function Candidate() {
 			console.error('Failed to load dashboard data:', error);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const handleProfileUpdate = async (e) => {
+		e.preventDefault();
+		try {
+			setUploading(true);
+			await apiRequest('/candidate/profile', {
+				method: 'PUT',
+				body: JSON.stringify(profileForm)
+			});
+			setUploadSuccess('Profile updated successfully!');
+			setShowProfileModal(false);
+			loadDashboardData(); // Refresh dashboard data
+		} catch (error) {
+			setUploadError(error.message || 'Failed to update profile');
+		} finally {
+			setUploading(false);
+		}
+	};
+
+	const handleResumeUpload = async () => {
+		const file = selectedFile;
+
+		if (!file) {
+			setUploadError('Please select a file to upload');
+			return;
+		}
+
+		// Frontend file validation
+		const allowedExtensions = ['.pdf', '.doc', '.docx'];
+		const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+		if (!allowedExtensions.includes(fileExtension)) {
+			setUploadError('Invalid file type. Only PDF, DOC, and DOCX files are allowed.');
+			return;
+		}
+
+		if (file.size > 10 * 1024 * 1024) { // 10MB limit
+			setUploadError('File size must be less than 10MB');
+			return;
+		}
+
+		const formData = new FormData();
+		formData.append('file', file); // Backend expects 'file' parameter
+
+		try {
+			setUploading(true);
+			setUploadError('');
+			setUploadSuccess('');
+			setUploadProgress(0);
+
+			const token = localStorage.getItem('rp_token');
+			const xhr = new XMLHttpRequest();
+
+			xhr.upload.addEventListener('progress', (e) => {
+				if (e.lengthComputable) {
+					const percentComplete = (e.loaded / e.total) * 100;
+					setUploadProgress(Math.round(percentComplete));
+				}
+			});
+
+			xhr.addEventListener('load', () => {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					setUploadSuccess('Resume uploaded successfully!');
+					setShowResumeUpload(false);
+					setSelectedFile(null);
+					setFilePreview(null);
+					loadDashboardData(); // Refresh dashboard data
+				} else {
+					try {
+						const errorData = JSON.parse(xhr.responseText);
+						setUploadError(errorData.message || 'Failed to upload resume');
+					} catch {
+						setUploadError('Failed to upload resume');
+					}
+				}
+				setUploading(false);
+				setUploadProgress(0);
+			});
+
+			xhr.addEventListener('error', () => {
+				setUploadError('Network error occurred during upload');
+				setUploading(false);
+				setUploadProgress(0);
+			});
+
+			xhr.addEventListener('abort', () => {
+				setUploadError('Upload was cancelled');
+				setUploading(false);
+				setUploadProgress(0);
+			});
+
+			xhr.open('POST', `${API_BASE_URL}/candidate/upload-cv`);
+			if (token) {
+				xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+			}
+			xhr.send(formData);
+		} catch (error) {
+			setUploadError(error.message || 'Failed to upload resume');
+			setUploading(false);
+			setUploadProgress(0);
+		}
+	};
+
+	const handleDragOver = (e) => {
+		e.preventDefault();
+		setIsDragOver(true);
+	};
+
+	const handleDragLeave = (e) => {
+		e.preventDefault();
+		setIsDragOver(false);
+	};
+
+	const handleDrop = (e) => {
+		e.preventDefault();
+		setIsDragOver(false);
+
+		const files = e.dataTransfer.files;
+		if (files.length > 0) {
+			const file = files[0];
+			setSelectedFile(file);
+			setFilePreview(file.name);
+			const fileInput = document.getElementById('file-upload');
+			fileInput.files = files; // Set the file to the input
+		}
+	};
+
+	const handleFileSelect = (e) => {
+		const file = e.target.files[0];
+		if (file) {
+			setSelectedFile(file);
+			setFilePreview(file.name);
 		}
 	};
 
@@ -344,7 +505,7 @@ export default function Candidate() {
 			<div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="text-xl font-semibold">Update Profile</h3>
-					<button 
+					<button
 						onClick={() => setShowProfileModal(false)}
 						className="text-gray-500 hover:text-gray-700"
 					>
@@ -353,14 +514,15 @@ export default function Candidate() {
 						</svg>
 					</button>
 				</div>
-				
-				<form className="space-y-4">
+
+				<form onSubmit={handleProfileUpdate} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
 							<input
 								type="text"
-								defaultValue={user?.fullName || ''}
+								value={profileForm.fullName}
+								onChange={(e) => setProfileForm({...profileForm, fullName: e.target.value})}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
@@ -368,17 +530,20 @@ export default function Candidate() {
 							<label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
 							<input
 								type="email"
-								defaultValue={user?.email || ''}
+								value={profileForm.email}
+								onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
 					</div>
-					
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
 							<input
 								type="tel"
+								value={profileForm.phone}
+								onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
 								placeholder="Enter phone number"
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
@@ -387,36 +552,26 @@ export default function Candidate() {
 							<label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
 							<input
 								type="number"
-								defaultValue={dashboardData?.candidate?.experienceYears || 0}
+								value={profileForm.experienceYears}
+								onChange={(e) => setProfileForm({...profileForm, experienceYears: parseInt(e.target.value) || 0})}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Skills</label>
-						<div className="flex flex-wrap gap-2 mb-2">
-							{mockSkills.map(skill => (
-								<span key={skill} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full cursor-pointer hover:bg-blue-200">
-									{skill} ×
-								</span>
-							))}
-						</div>
-						<input
-							type="text"
-							placeholder="Add new skill"
-							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-						/>
-					</div>
-
-					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
 						<textarea
 							rows={4}
+							value={profileForm.bio}
+							onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
 							placeholder="Tell us about yourself..."
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						></textarea>
 					</div>
+
+					{uploadError && <p className="text-red-500 text-sm">{uploadError}</p>}
+					{uploadSuccess && <p className="text-green-500 text-sm">{uploadSuccess}</p>}
 
 					<div className="flex justify-end gap-3">
 						<button
@@ -428,9 +583,10 @@ export default function Candidate() {
 						</button>
 						<button
 							type="submit"
-							className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+							disabled={uploading}
+							className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
 						>
-							Save Changes
+							{uploading ? 'Saving...' : 'Save Changes'}
 						</button>
 					</div>
 				</form>
@@ -453,24 +609,71 @@ export default function Candidate() {
 					</button>
 				</div>
 				
-				<div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-					<svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-						<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-					</svg>
-					<div className="mt-4">
-						<label htmlFor="file-upload" className="cursor-pointer">
-							<span className="mt-2 block text-sm font-medium text-gray-900">
-								Drop your resume here, or <span className="text-blue-600">browse</span>
-							</span>
-							<input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".pdf,.doc,.docx" />
-						</label>
-						<p className="mt-1 text-xs text-gray-500">PDF, DOC, DOCX up to 10MB</p>
+				{selectedFile ? (
+					<div className="border-2 border-solid border-green-300 rounded-lg p-6 bg-green-50">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center">
+								<svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								<div className="ml-3">
+									<p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+									<p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+								</div>
+							</div>
+							<div className="flex gap-2">
+								<label htmlFor="file-upload" className="cursor-pointer px-3 py-1 text-sm text-blue-600 hover:text-blue-800">
+									Change
+									<input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".pdf,.doc,.docx" onChange={handleFileSelect} />
+								</label>
+								<button
+									onClick={() => {
+										setSelectedFile(null);
+										setFilePreview(null);
+										const fileInput = document.getElementById('file-upload');
+										fileInput.value = '';
+									}}
+									className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
 					</div>
-				</div>
+				) : (
+					<div
+						className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+							isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+						}`}
+						onDragOver={handleDragOver}
+						onDragLeave={handleDragLeave}
+						onDrop={handleDrop}
+					>
+						<svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+							<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+						</svg>
+						<div className="mt-4">
+							<label htmlFor="file-upload" className="cursor-pointer">
+								<span className="mt-2 block text-sm font-medium text-gray-900">
+									{isDragOver ? 'Release to upload' : 'Drop your resume here, or'} <span className="text-blue-600">browse</span>
+								</span>
+								<input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".pdf,.doc,.docx" onChange={handleFileSelect} />
+							</label>
+							<p className="mt-1 text-xs text-gray-500">PDF, DOC, DOCX up to 10MB</p>
+						</div>
+					</div>
+				)}
+
+				{uploadError && <p className="text-red-500 text-sm mt-4">{uploadError}</p>}
+				{uploadSuccess && <p className="text-green-500 text-sm mt-4">{uploadSuccess}</p>}
 
 				<div className="mt-6">
-					<button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-						Upload Resume
+					<button
+						onClick={handleResumeUpload}
+						disabled={uploading || !selectedFile}
+						className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+					>
+						{uploading ? 'Uploading...' : 'Upload Resume'}
 					</button>
 				</div>
 			</div>
