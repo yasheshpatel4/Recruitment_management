@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Admin from './pages/dashboards/Admin.jsx';
-import Candidate from './pages/dashboards/Candidate.jsx';
+import CandidateNew from './pages/dashboards/CandidateNew.jsx';
 import Others from './pages/dashboards/Others.jsx';
 
 function ProtectedRoute({ children, roles }) {
@@ -33,7 +33,7 @@ export default function App() {
 						<Route path="/login" element={<Login />} />
 						<Route path="/register" element={<Register />} />
 						<Route path="/admin" element={<ProtectedRoute roles={["Admin"]}><Admin /></ProtectedRoute>} />
-						<Route path="/candidate" element={<ProtectedRoute roles={["Candidate"]}><Candidate /></ProtectedRoute>} />
+						<Route path="/candidate" element={<ProtectedRoute roles={["Candidate"]}><CandidateNew /></ProtectedRoute>} />
 						<Route path="/others" element={<ProtectedRoute roles={["HR","Recruiter","Interviewer","Reviewer"]}><Others /></ProtectedRoute>} />
 						<Route path="*" element={<Navigate to="/login" replace />} />
 					</Routes>
