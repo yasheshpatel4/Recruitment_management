@@ -279,6 +279,35 @@ namespace RecruitmentSystem.Api.Controllers
             }
         }
 
+        [HttpDelete("document/{id}")]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var candidate = await _candidateService.GetCandidateByUserIdAsync(userId);
+
+                if (candidate == null)
+                {
+                    return NotFound(new { message = "Candidate profile not found" });
+                }
+
+                var success = await _candidateService.DeleteDocumentAsync(id, candidate.Id);
+
+                if (!success)
+                {
+                    return NotFound(new { message = "Document not found or does not belong to this candidate" });
+                }
+
+                return Ok(new { message = "Document deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting document");
+                return StatusCode(500, new { message = "Error deleting document", error = ex.Message });
+            }
+        }
+
         [HttpPost("apply/{jobId}")]
         public async Task<IActionResult> ApplyForJob(int jobId)
         {

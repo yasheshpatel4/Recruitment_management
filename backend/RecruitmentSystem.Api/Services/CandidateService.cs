@@ -58,6 +58,11 @@ namespace RecruitmentSystem.Api.Services
             return await _candidateRepository.GetDocumentsByCandidateIdAsync(candidateId);
         }
 
+        public async Task<bool> DeleteDocumentAsync(int documentId, int candidateId)
+        {
+            return await _candidateRepository.DeleteDocumentAsync(documentId, candidateId);
+        }
+
         public async Task<bool> ApplyForJobAsync(int candidateId, int jobId)
         {
             return await _candidateRepository.ApplyForJobAsync(candidateId, jobId);

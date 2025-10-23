@@ -105,6 +105,27 @@ namespace RecruitmentSystem.Api.Repositories
                 .ToListAsync();
         }
 
+        public async Task<bool> DeleteDocumentAsync(int documentId, int candidateId)
+        {
+            var document = await _context.Documents
+                .FirstOrDefaultAsync(d => d.Id == documentId && d.CandidateId == candidateId);
+
+            if (document == null)
+            {
+                return false;
+            }
+
+            // Delete the physical file if it exists
+            if (System.IO.File.Exists(document.FilePath))
+            {
+                System.IO.File.Delete(document.FilePath);
+            }
+
+            _context.Documents.Remove(document);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> ApplyForJobAsync(int candidateId, int jobId)
         {
             // Check if already applied
