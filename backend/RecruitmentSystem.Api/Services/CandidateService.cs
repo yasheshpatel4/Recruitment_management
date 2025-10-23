@@ -35,9 +35,9 @@ namespace RecruitmentSystem.Api.Services
             return await _candidateRepository.UpdateAsync(candidate);
         }
 
-        public async Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null)
+        public async Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null, string? search = null)
         {
-            return await _candidateRepository.GetOpenJobsAsync(page, pageSize, location, experience, skills);
+            return await _candidateRepository.GetOpenJobsAsync(page, pageSize, location, experience, skills, search);
         }
 
         public async Task<Document> UploadDocumentAsync(int candidateId, string documentType, string fileName, string filePath)

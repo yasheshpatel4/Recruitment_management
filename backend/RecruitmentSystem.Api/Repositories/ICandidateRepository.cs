@@ -10,7 +10,7 @@ namespace RecruitmentSystem.Api.Repositories
         Task<Candidate?> GetByIdAsync(int id);
         Task<Candidate> CreateAsync(Candidate candidate);
         Task<Candidate?> UpdateAsync(Candidate candidate);
-        Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null);
+        Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null, string? search = null);
         Task<Document> AddDocumentAsync(Document document);
         Task<List<Document>> GetDocumentsByCandidateIdAsync(int candidateId);
         Task<bool> DeleteDocumentAsync(int documentId, int candidateId);

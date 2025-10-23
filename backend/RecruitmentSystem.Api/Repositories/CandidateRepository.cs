@@ -48,7 +48,7 @@ namespace RecruitmentSystem.Api.Repositories
             return candidate;
         }
 
-        public async Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null)
+        public async Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null, string? search = null)
         {
             var query = _context.Jobs
                 .Include(j => j.JobSkills)
@@ -71,6 +71,14 @@ namespace RecruitmentSystem.Api.Repositories
             {
                 var skillList = skills.Split(',').Select(s => s.Trim().ToLower()).ToList();
                 query = query.Where(j => j.JobSkills.Any(js => skillList.Contains(js.Skill.Name.ToLower())));
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var searchLower = search.ToLower();
+                query = query.Where(j =>
+                    j.Title.Contains(searchLower) ||
+                    j.JobSkills.Any(js => js.Skill.Name.Contains(searchLower)));
             }
 
             return await query

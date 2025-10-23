@@ -10,7 +10,7 @@ namespace RecruitmentSystem.Api.Services
         Task<Candidate?> GetCandidateByIdAsync(int id);
         Task<Candidate> CreateCandidateAsync(Candidate candidate);
         Task<Candidate?> UpdateCandidateAsync(Candidate candidate);
-        Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null);
+        Task<List<Job>> GetOpenJobsAsync(int page = 1, int pageSize = 10, string? location = null, int? experience = null, string? skills = null, string? search = null);
         Task<Document> UploadDocumentAsync(int candidateId, string documentType, string fileName, string filePath);
         Task<List<Document>> GetCandidateDocumentsAsync(int candidateId);
         Task<bool> DeleteDocumentAsync(int documentId, int candidateId);

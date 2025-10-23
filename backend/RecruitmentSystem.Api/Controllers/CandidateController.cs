@@ -29,11 +29,12 @@ namespace RecruitmentSystem.Api.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] string? location = null,
             [FromQuery] int? experience = null,
-            [FromQuery] string? skills = null)
+            [FromQuery] string? skills = null,
+            [FromQuery] string? search = null)
         {
             try
             {
-                var jobs = await _candidateService.GetOpenJobsAsync(page, pageSize, location, experience, skills);
+                var jobs = await _candidateService.GetOpenJobsAsync(page, pageSize, location, experience, skills, search);
                 return Ok(jobs);
             }
             catch (Exception ex)
