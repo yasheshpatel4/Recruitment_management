@@ -126,6 +126,24 @@ namespace RecruitmentSystem.Api.Repositories
             return true;
         }
 
+        public async Task<bool> VerifyDocumentAsync(int documentId, int verifiedByUserId)
+        {
+            var document = await _context.Documents
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+
+            if (document == null)
+            {
+                return false;
+            }
+
+            document.Verified = true;
+            document.VerifiedAt = DateTime.UtcNow;
+            document.VerifiedBy = verifiedByUserId;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> ApplyForJobAsync(int candidateId, int jobId)
         {
             // Check if already applied

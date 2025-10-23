@@ -308,6 +308,29 @@ namespace RecruitmentSystem.Api.Controllers
             }
         }
 
+        [HttpPost("verify-document/{id}")]
+        [Authorize(Roles = "HR")]
+        public async Task<IActionResult> VerifyDocument(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var success = await _candidateService.VerifyDocumentAsync(id, userId);
+
+                if (!success)
+                {
+                    return NotFound(new { message = "Document not found" });
+                }
+
+                return Ok(new { message = "Document verified successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying document");
+                return StatusCode(500, new { message = "Error verifying document", error = ex.Message });
+            }
+        }
+
         [HttpPost("apply/{jobId}")]
         public async Task<IActionResult> ApplyForJob(int jobId)
         {

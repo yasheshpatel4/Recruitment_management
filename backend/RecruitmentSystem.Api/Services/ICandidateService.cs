@@ -14,6 +14,7 @@ namespace RecruitmentSystem.Api.Services
         Task<Document> UploadDocumentAsync(int candidateId, string documentType, string fileName, string filePath);
         Task<List<Document>> GetCandidateDocumentsAsync(int candidateId);
         Task<bool> DeleteDocumentAsync(int documentId, int candidateId);
+        Task<bool> VerifyDocumentAsync(int documentId, int verifiedByUserId);
         Task<bool> ApplyForJobAsync(int candidateId, int jobId);
         Task<List<CandidateJob>> GetAppliedJobsAsync(int candidateId);
         Task<Skill> GetOrCreateSkillAsync(string skillName);
