@@ -251,6 +251,53 @@ namespace RecruitmentSystem.Api.Controllers
             }
         }
 
+        [HttpGet("others")]
+        [Authorize]
+        public async Task<ActionResult<object>> GetOthersDashboard()
+        {
+            try
+            {
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found" });
+                }
+
+                // Parse roles from JSON string
+                var roles = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.Roles) ?? new List<string>();
+
+                // Default to HR dashboard data if user has multiple roles or no specific role
+                var stats = await GetDashboardStats();
+                var recentCandidates = await GetRecentCandidates(10);
+                var upcomingInterviews = await GetUpcomingInterviews(10);
+                var pendingTasks = await GetPendingTasks();
+                var notifications = await GetNotifications(GetCurrentUserId(), 10);
+
+                // Add recent jobs if user is a recruiter
+                List<RecentJobDto> recentJobs = null;
+                if (roles.Contains("Recruiter"))
+                {
+                    recentJobs = await GetRecentJobs(10);
+                }
+
+                return Ok(new
+                {
+                    stats,
+                    recentJobs,
+                    recentCandidates,
+                    upcomingInterviews,
+                    pendingTasks,
+                    notifications
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error loading others dashboard", error = ex.Message });
+            }
+        }
+
         private async Task<DashboardStatsDto> GetDashboardStats()
         {
             var totalJobs = await _context.Jobs.CountAsync();
