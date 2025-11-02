@@ -5,7 +5,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Admin from './pages/dashboards/Admin.jsx';
 import CandidateNew from './pages/dashboards/CandidateNew.jsx';
-import Others from './pages/dashboards/Others.jsx';
+import OthersNew from './pages/dashboards/OthersNew.jsx';
 
 function ProtectedRoute({ children, roles }) {
 	const { user } = useAuth();
@@ -34,7 +34,7 @@ export default function App() {
 						<Route path="/register" element={<Register />} />
 						<Route path="/admin" element={<ProtectedRoute roles={["Admin"]}><Admin /></ProtectedRoute>} />
 						<Route path="/candidate" element={<ProtectedRoute roles={["Candidate"]}><CandidateNew /></ProtectedRoute>} />
-						<Route path="/others" element={<ProtectedRoute roles={["HR","Recruiter","Interviewer","Reviewer"]}><Others /></ProtectedRoute>} />
+						<Route path="/others" element={<ProtectedRoute roles={["HR","Recruiter","Interviewer","Reviewer"]}><OthersNew /></ProtectedRoute>} />
 						<Route path="*" element={<Navigate to="/login" replace />} />
 					</Routes>
 				</div>
