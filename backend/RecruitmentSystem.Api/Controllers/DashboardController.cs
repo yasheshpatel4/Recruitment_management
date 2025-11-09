@@ -170,7 +170,15 @@ namespace RecruitmentSystem.Api.Controllers
 
                 if (candidate == null)
                 {
-                    return NotFound(new { message = "Candidate profile not found" });
+                    candidate = new Candidate
+                    {
+                        UserId = userId,
+                        ExperienceYears = 0,
+                        Status = "Applied",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Candidates.Add(candidate);
+                    await _context.SaveChangesAsync();
                 }
 
                 var appliedJobs = await _context.CandidateJobs

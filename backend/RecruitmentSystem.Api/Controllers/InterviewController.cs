@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace RecruitmentSystem.Api.Controllers
 {
     [ApiController]
-    [Route("api/interview")]
+    [Route("api/interviews")]
     [Authorize]
     public class InterviewController : ControllerBase
     {
