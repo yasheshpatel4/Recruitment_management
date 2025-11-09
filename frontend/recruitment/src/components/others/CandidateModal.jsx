@@ -1,4 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+const API_BASE_URL = 'http://localhost:5000/api';
+
+async function apiRequest(endpoint, options = {}) {
+	const token = localStorage.getItem('rp_token');
+	const config = {
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` }),
+	},
+		...options,
+	};
+
+	const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(data.message || 'API request failed');
+	}
+
+	return data;
+}
 
 export default function CandidateModal({
 	showCandidateModal,
@@ -6,6 +27,28 @@ export default function CandidateModal({
 	selectedCandidate,
 	setShowInterviewModal
 }) {
+	const [documents, setDocuments] = useState([]);
+	const [loadingDocuments, setLoadingDocuments] = useState(false);
+
+	useEffect(() => {
+		if (showCandidateModal && selectedCandidate) {
+			loadCandidateDocuments();
+		}
+	}, [showCandidateModal, selectedCandidate]);
+
+	const loadCandidateDocuments = async () => {
+		try {
+			setLoadingDocuments(true);
+			const data = await apiRequest(`/candidates/${selectedCandidate.id}/documents`);
+			setDocuments(data);
+		} catch (error) {
+			console.error('Failed to load candidate documents:', error);
+			setDocuments([]);
+		} finally {
+			setLoadingDocuments(false);
+		}
+	};
+
 	if (!showCandidateModal || !selectedCandidate) return null;
 
 	return (
@@ -78,7 +121,45 @@ export default function CandidateModal({
 							</div>
 						</div>
 					</div>
-
+					{/* Documents Section */}
+					<div>
+						<h4 className="text-lg font-medium text-gray-900 mb-4">Documents</h4>
+						{loadingDocuments ? (
+							<div className="text-center py-4">
+								<div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+								<p className="mt-2 text-sm text-gray-600">Loading documents...</p>
+							</div>
+						) : documents.length > 0 ? (
+							<div className="space-y-3">
+								{documents.map(document => (
+									<div key={document.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+										<div className="flex items-center space-x-3">
+											<svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+											</svg>
+											<div>
+												<p className="text-sm font-medium text-gray-900">{document.documentType}</p>
+												<p className="text-xs text-gray-500">Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}</p>
+												{document.verified && (
+													<p className="text-xs text-green-600">✓ Verified</p>
+												)}
+											</div>
+										</div>
+										<a
+											href={`http://localhost:5000/${document.filePath.replace(/\\/g, '/')}`}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+										>
+											View
+										</a>
+									</div>
+								))}
+							</div>
+						) : (
+							<p className="text-sm text-gray-500">No documents available</p>
+						)}
+					</div>
 					<div className="flex justify-end gap-3">
 						<button
 							onClick={() => setShowCandidateModal(false)}

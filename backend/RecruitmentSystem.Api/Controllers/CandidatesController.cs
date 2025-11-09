@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentSystem.Api.Data;
 using RecruitmentSystem.Api.Models;
+using RecruitmentSystem.Api.Services;
 using System.Security.Claims;
 
 namespace RecruitmentSystem.Api.Controllers
@@ -13,10 +14,12 @@ namespace RecruitmentSystem.Api.Controllers
     public class CandidatesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ICandidateService _candidateService;
 
-        public CandidatesController(AppDbContext context)
+        public CandidatesController(AppDbContext context, ICandidateService candidateService)
         {
             _context = context;
+            _candidateService = candidateService;
         }
 
         [HttpGet]
@@ -49,6 +52,20 @@ namespace RecruitmentSystem.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error retrieving candidates", error = ex.Message });
+            }
+        }
+        [HttpGet("{id}/documents")]
+        [Authorize(Roles = "HR,Interviewer")]
+        public async Task<ActionResult<List<Document>>> GetCandidateDocuments(int id)
+       {
+            try
+            {
+                var documents = await _candidateService.GetCandidateDocumentsAsync(id);
+                return Ok(documents);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving candidate documents", error = ex.Message });
             }
         }
     }
