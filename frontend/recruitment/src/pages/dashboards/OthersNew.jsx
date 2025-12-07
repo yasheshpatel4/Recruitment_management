@@ -202,9 +202,23 @@ export default function OthersNew() {
 		e.preventDefault();
 		try {
 			setSchedulingInterview(true);
-			await apiRequest('/interviews', {
+			// Combine scheduledDate and scheduledTime into ScheduledDate
+			const scheduledDateTime = interviewForm.scheduledDate && interviewForm.scheduledTime
+				? `${interviewForm.scheduledDate}T${interviewForm.scheduledTime}:00`
+				: null;
+
+			const payload = {
+				CandidateId: interviewForm.candidateId,
+				JobId: interviewForm.jobId,
+				ScheduledDate: scheduledDateTime,
+				InterviewType: interviewForm.interviewType,
+				RoundNo: interviewForm.roundNo,
+				InterviewerIds: interviewForm.interviewerIds
+			};
+
+			await apiRequest('/interviews/schedule', {
 				method: 'POST',
-				body: JSON.stringify(interviewForm)
+				body: JSON.stringify(payload)
 			});
 			setShowInterviewModal(false);
 			setInterviewForm({
