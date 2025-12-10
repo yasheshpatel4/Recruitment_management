@@ -43,8 +43,10 @@ export default function InterviewManagement({
 										<div className="flex items-center mt-2">
 											<span className={`px-2 py-1 text-xs rounded-full ${
 												interview.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-												interview.status === 'Completed' ? 'bg-green-100 text-green-800' :
-												interview.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+												interview.status === 'Other Interview' ? 'bg-blue-100 text-blue-800' :
+												interview.status === 'Selected' ? 'bg-green-100 text-green-800' :
+												interview.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+												interview.status === 'Cancelled' ? 'bg-gray-100 text-gray-800' :
 												'bg-gray-100 text-gray-800'
 											}`}>
 												{interview.status}
@@ -70,7 +72,9 @@ export default function InterviewManagement({
 											disabled={updatingStatus}
 										>
 											<option value="Scheduled">Scheduled</option>
-											<option value="Completed">Completed</option>
+											<option value="Other Interview">Other Interview</option>
+											<option value="Selected">Selected</option>
+											<option value="Rejected">Rejected</option>
 											<option value="Cancelled">Cancelled</option>
 										</select>
 										<button
@@ -80,7 +84,7 @@ export default function InterviewManagement({
 											}}
 											className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
 										>
-											{interview.status === 'Completed' ? 'View Feedback' : 'Add Feedback'}
+											{interview.status === 'Selected' || interview.status === 'Rejected' ? 'View Feedback' : 'Add Feedback'}
 										</button>
 										<button className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
 											Edit

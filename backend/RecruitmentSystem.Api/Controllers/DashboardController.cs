@@ -200,7 +200,7 @@ namespace RecruitmentSystem.Api.Controllers
                     .Include(i => i.Job)
                     .Include(i => i.Interviewers)
                     .ThenInclude(ir => ir.User)
-                    .Where(i => i.CandidateId == candidate.Id)
+                    .Where(i => i.CandidateId == candidate.Id && i.Status != "Selected")
                     .OrderByDescending(i => i.ScheduledDate)
                     .Take(10)
                     .Select(i => new
@@ -229,6 +229,24 @@ namespace RecruitmentSystem.Api.Controllers
                         o.Status
                     })
                     .ToListAsync();
+
+                // Include interviews with status "Selected" as offers
+                var selectedInterviews = await _context.Interviews
+                    .Include(i => i.Job)
+                    .Where(i => i.CandidateId == candidate.Id && i.Status == "Selected")
+                    .OrderByDescending(i => i.CompletedAt)
+                    .Take(5)
+                    .Select(i => new
+                    {
+                        Id = i.Id,
+                        JobTitle = i.Job.Title,
+                        OfferDate = i.CompletedAt ?? i.ScheduledDate,
+                        JoiningDate = (DateTime?)null,
+                        Status = "Selected"
+                    })
+                    .ToListAsync();
+
+                offers.AddRange(selectedInterviews);
 
                 var notifications = await GetNotifications(userId, 10);
 

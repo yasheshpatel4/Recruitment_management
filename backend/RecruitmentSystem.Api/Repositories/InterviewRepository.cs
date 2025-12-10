@@ -121,7 +121,7 @@ namespace RecruitmentSystem.Api.Repositories
                 return false;
 
             interview.Status = status;
-            if (status == "Completed")
+            if (status == "Selected" || status == "Rejected")
             {
                 interview.CompletedAt = DateTime.UtcNow;
             }

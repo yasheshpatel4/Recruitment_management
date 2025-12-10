@@ -6,6 +6,6 @@ namespace RecruitmentSystem.Api.Models
     {
         [Required]
         [StringLength(20)]
-        public string Status { get; set; } = string.Empty; // Scheduled, Completed, Cancelled
+        public string Status { get; set; } = string.Empty; // Scheduled, Other Interview, Selected, Rejected, Cancelled
     }
 }

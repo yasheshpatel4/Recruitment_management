@@ -109,7 +109,8 @@ const ApplicationTracker = () => {
 				<div className="flex-1">
 					<h4 className="font-medium text-gray-900">{offer.jobTitle}</h4>
 					<p className="text-sm text-gray-600">
-						Offer Date: {new Date(offer.offerDate).toLocaleDateString()}
+						{offer.status === 'Selected' ? 'Selection Date: ' : 'Offer Date: '}
+						{new Date(offer.offerDate).toLocaleDateString()}
 						{offer.joiningDate && ` • Joining: ${new Date(offer.joiningDate).toLocaleDateString()}`}
 					</p>
 					<div className="flex items-center mt-2">
@@ -118,6 +119,7 @@ const ApplicationTracker = () => {
 							offer.status === 'Accepted' ? 'bg-green-100 text-green-800' :
 							offer.status === 'Rejected' ? 'bg-red-100 text-red-800' :
 							offer.status === 'Joined' ? 'bg-purple-100 text-purple-800' :
+							offer.status === 'Selected' ? 'bg-green-100 text-green-800' :
 							'bg-gray-100 text-gray-800'
 						}`}>
 							{offer.status}

@@ -268,6 +268,9 @@ export default function OthersNew() {
 				method: 'PUT',
 				body: JSON.stringify({ status })
 			});
+			if (status === 'Other Interview') {
+				setShowInterviewModal(true);
+			}
 			loadInterviews();
 		} catch (error) {
 			console.error('Failed to update interview status:', error);

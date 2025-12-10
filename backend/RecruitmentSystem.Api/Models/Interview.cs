@@ -24,7 +24,7 @@ namespace RecruitmentSystem.Api.Models
         
         [Required]
         [StringLength(20)]
-        public string Status { get; set; } = "Scheduled"; // Scheduled, Completed, Cancelled
+        public string Status { get; set; } = "Scheduled"; // Scheduled, Other Interview, Selected, Rejected, Cancelled
         
         public DateTime? CompletedAt { get; set; }
         
