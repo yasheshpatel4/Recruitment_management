@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using RecruitmentSystem.Api.Data;
 using RecruitmentSystem.Api.Models;
 using RecruitmentSystem.Api.Repositories;
 using System.Collections.Generic;
@@ -9,10 +11,12 @@ namespace RecruitmentSystem.Api.Services
     public class InterviewService : IInterviewService
     {
         private readonly IInterviewRepository _interviewRepository;
+        private readonly AppDbContext _context;
 
-        public InterviewService(IInterviewRepository interviewRepository)
+        public InterviewService(IInterviewRepository interviewRepository, AppDbContext context)
         {
             _interviewRepository = interviewRepository;
+            _context = context;
         }
 
         public async Task<InterviewDto?> GetInterviewByIdAsync(int id)
@@ -72,7 +76,31 @@ namespace RecruitmentSystem.Api.Services
                 return null;
 
             var updatedInterview = await _interviewRepository.GetByIdAsync(interviewId);
-            return updatedInterview != null ? MapToDto(updatedInterview) : null;
+            if (updatedInterview == null)
+                return null;
+
+            // Create notification for the candidate
+            var interviewWithDetails = await _context.Interviews
+                .Include(i => i.Candidate)
+                .ThenInclude(c => c.User)
+                .Include(i => i.Job)
+                .FirstOrDefaultAsync(i => i.Id == interviewId);
+
+            if (interviewWithDetails != null && interviewWithDetails.Candidate != null)
+            {
+                var notification = new Notification
+                {
+                    UserId = interviewWithDetails.Candidate.UserId,
+                    Message = $"Your interview status for '{interviewWithDetails.Job?.Title ?? "Unknown Job"}' has been updated to '{dto.Status}'.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
+            }
+
+            return MapToDto(updatedInterview);
         }
 
         public async Task<Feedback> AddInterviewFeedbackAsync(int interviewId, InterviewFeedbackDto dto)
