@@ -11,11 +11,13 @@ namespace RecruitmentSystem.Api.Services
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly ICandidateService _candidateService;
         private readonly IConfiguration _configuration;
 
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
+        public AuthService(IUserRepository userRepository, ICandidateService candidateService, IConfiguration configuration)
         {
             _userRepository = userRepository;
+            _candidateService = candidateService;
             _configuration = configuration;
         }
 
@@ -92,10 +94,24 @@ namespace RecruitmentSystem.Api.Services
             };
 
             await _userRepository.CreateAsync(user);
+
+            // Create candidate record if user has Candidate role
+            if (isCandidate)
+            {
+                var candidate = new Candidate
+                {
+                    UserId = user.Id,
+                    ExperienceYears = 0, // Default value
+                    Status = "Applied",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _candidateService.CreateCandidateAsync(candidate);
+            }
+
             var userDto = MapToUserDto(user);
 
-            var message = internalRoles.Any() 
-                ? "Registration successful. Your account is pending admin approval." 
+            var message = internalRoles.Any()
+                ? "Registration successful. Your account is pending admin approval."
                 : "Registration successful.";
 
             return new AuthResponse

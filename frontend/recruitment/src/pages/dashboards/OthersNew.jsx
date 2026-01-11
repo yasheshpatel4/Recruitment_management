@@ -474,6 +474,7 @@ export default function OthersNew() {
 				setShowCandidateModal={setShowCandidateModal}
 				selectedCandidate={selectedCandidate}
 				setShowInterviewModal={setShowInterviewModal}
+				loadCandidates={loadCandidates}
 			/>
 
 			<InterviewModal
