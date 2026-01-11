@@ -34,9 +34,7 @@ const ProfileManagement = ({ onProfileUpdate }) => {
 	const [editForm, setEditForm] = useState({
 		fullName: '',
 		email: '',
-		phone: '',
 		experienceYears: 0,
-		bio: '',
 		skills: []
 	});
 
@@ -52,9 +50,7 @@ const ProfileManagement = ({ onProfileUpdate }) => {
 			setEditForm({
 				fullName: data.user?.fullName || '',
 				email: data.user?.email || '',
-				phone: data.phone || '',
 				experienceYears: data.experienceYears || 0,
-				bio: data.bio || '',
 				skills: data.candidateSkills?.map(cs => cs.skill?.name).filter(Boolean) || []
 			});
 		} catch (error) {
@@ -75,9 +71,7 @@ const ProfileManagement = ({ onProfileUpdate }) => {
 			const updateData = {
 				fullName: editForm.fullName,
 				email: editForm.email,
-				phone: editForm.phone,
 				experienceYears: editForm.experienceYears,
-				bio: editForm.bio,
 				skills: editForm.skills
 			};
 
@@ -152,38 +146,15 @@ const ProfileManagement = ({ onProfileUpdate }) => {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-							<input
-								type="tel"
-								value={editForm.phone}
-								onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-								placeholder="Enter phone number"
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
-							<input
-								type="number"
-								value={editForm.experienceYears}
-								onChange={(e) => setEditForm({...editForm, experienceYears: parseInt(e.target.value) || 0})}
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-								min="0"
-							/>
-						</div>
-					</div>
-
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-						<textarea
-							rows={4}
-							value={editForm.bio}
-							onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-							placeholder="Tell us about yourself..."
+						<label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
+						<input
+							type="number"
+							value={editForm.experienceYears}
+							onChange={(e) => setEditForm({...editForm, experienceYears: parseInt(e.target.value) || 0})}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-						></textarea>
+							min="0"
+						/>
 					</div>
 
 					<div>
@@ -301,16 +272,8 @@ const ProfileManagement = ({ onProfileUpdate }) => {
 								<p className="mt-1 text-sm text-gray-900">{profileData?.user?.email || 'Not provided'}</p>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700">Phone</label>
-								<p className="mt-1 text-sm text-gray-900">{profileData?.phone || 'Not provided'}</p>
-							</div>
-							<div>
 								<label className="block text-sm font-medium text-gray-700">Experience</label>
 								<p className="mt-1 text-sm text-gray-900">{profileData?.experienceYears || 0} years</p>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700">Bio</label>
-								<p className="mt-1 text-sm text-gray-900">{profileData?.bio || 'Not provided'}</p>
 							</div>
 						</div>
 					</div>
