@@ -56,12 +56,26 @@ namespace RecruitmentSystem.Api.Controllers
         }
         [HttpGet("{id}/documents")]
         [Authorize(Roles = "HR,Interviewer")]
-        public async Task<ActionResult<List<Document>>> GetCandidateDocuments(int id)
+        public async Task<ActionResult<List<object>>> GetCandidateDocuments(int id)
        {
             try
             {
                 var documents = await _candidateService.GetCandidateDocumentsAsync(id);
-                return Ok(documents);
+
+                // Transform documents to include URL instead of file path
+                var documentDtos = documents.Select(d => new
+                {
+                    d.Id,
+                    d.DocumentType,
+                    FileName = Path.GetFileName(d.FilePath),
+                    d.UploadedAt,
+                    d.Verified,
+                    d.VerifiedBy,
+                    d.VerifiedAt,
+                    Url = d.FilePath.Replace(Path.Combine(Directory.GetCurrentDirectory(), "uploads"), "/uploads").Replace("\\", "/")
+                }).ToList();
+
+                return Ok(documentDtos);
             }
             catch (Exception ex)
             {

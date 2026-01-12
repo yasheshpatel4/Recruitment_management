@@ -180,7 +180,7 @@ export default function CandidateModal({
 												</div>
 											</div>
 											<a
-												href={`http://localhost:5000/${document.filePath.replace(/\\/g, '/')}`}
+												href={`http://localhost:5000${document.url}`}
 												target="_blank"
 												rel="noopener noreferrer"
 												className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
