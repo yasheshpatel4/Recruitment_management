@@ -114,7 +114,33 @@ namespace RecruitmentSystem.Api.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            return await _interviewRepository.AddFeedbackAsync(feedback);
+            var addedFeedback = await _interviewRepository.AddFeedbackAsync(feedback);
+
+            // Create notification for the candidate
+            var interviewWithDetails = await _context.Interviews
+                .Include(i => i.Candidate)
+                .ThenInclude(c => c.User)
+                .Include(i => i.Job)
+                .Include(i => i.Feedbacks)
+                .ThenInclude(f => f.Interviewer)
+                .FirstOrDefaultAsync(i => i.Id == interviewId);
+
+            if (interviewWithDetails != null && interviewWithDetails.Candidate != null)
+            {
+                var interviewer = interviewWithDetails.Feedbacks.FirstOrDefault(f => f.Id == addedFeedback.Id)?.Interviewer;
+                var notification = new Notification
+                {
+                    UserId = interviewWithDetails.Candidate.UserId,
+                    Message = $"Feedback has been provided for your interview for '{interviewWithDetails.Job?.Title ?? "Unknown Job"}' by {interviewer?.FullName ?? "Unknown Interviewer"}.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
+            }
+
+            return addedFeedback;
         }
 
         public async Task<List<FeedbackDto>> GetInterviewFeedbacksAsync(int interviewId)
