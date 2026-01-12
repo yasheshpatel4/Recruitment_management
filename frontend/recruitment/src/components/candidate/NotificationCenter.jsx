@@ -44,8 +44,30 @@ const NotificationCenter = () => {
 		}
 	};
 
+	const handleNotificationClick = async (notification) => {
+		if (notification.isRead) return; // Already read
+
+		try {
+			await apiRequest(`/dashboard/notifications/${notification.id}/read`, {
+				method: 'PUT'
+			});
+
+			// Update local state
+			setNotifications(prevNotifications =>
+				prevNotifications.map(n =>
+					n.id === notification.id ? { ...n, isRead: true } : n
+				)
+			);
+		} catch (error) {
+			console.error('Failed to mark notification as read:', error);
+		}
+	};
+
 	const NotificationCard = ({ notification }) => (
-		<div className={`bg-white rounded-lg shadow p-4 ${!notification.isRead ? 'border-l-4 border-blue-500' : ''}`}>
+		<div
+			className={`bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-gray-50 transition-colors ${!notification.isRead ? 'border-l-4 border-blue-500' : ''}`}
+			onClick={() => handleNotificationClick(notification)}
+		>
 			<div className="flex justify-between items-start">
 				<div className="flex-1">
 					<p className="text-sm text-gray-900">{notification.message}</p>

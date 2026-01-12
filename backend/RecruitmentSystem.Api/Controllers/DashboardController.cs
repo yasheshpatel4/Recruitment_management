@@ -48,6 +48,7 @@ namespace RecruitmentSystem.Api.Controllers
                 return StatusCode(500, new { message = "Error loading admin dashboard", error = ex.Message });
             }
         }
+        
 
         [HttpGet("hr")]
         [Authorize(Roles = "HR")]
@@ -537,6 +538,31 @@ namespace RecruitmentSystem.Api.Controllers
             tasks.AddRange(pendingInterviews);
 
             return tasks.OrderBy(t => t.DueDate).Take(10).ToList();
+        }
+
+        [HttpPut("notifications/{id}/read")]
+        public async Task<IActionResult> MarkNotificationAsRead(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var notification = await _context.Notifications
+                    .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+                if (notification == null)
+                {
+                    return NotFound(new { message = "Notification not found" });
+                }
+
+                notification.IsRead = true;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Notification marked as read" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error marking notification as read", error = ex.Message });
+            }
         }
 
         private async Task<List<NotificationDto>> GetNotifications(int userId, int count)
